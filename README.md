@@ -1,5 +1,7 @@
 <div align="center">
 
+![auto-lab banner](./docs/images/banner.png)
+
 # 🧪 auto-lab
 
 <p><em>Rigorous, anti-overfitting experiments for engineering decisions.</em></p>
