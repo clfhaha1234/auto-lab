@@ -2,7 +2,9 @@
 
 # 🧪 auto-lab
 
-<p><em>Rigorous, anti-overfitting experiments for engineering decisions — applied to prompt tuning, model selection, retrieval strategies, and architecture comparisons.</em></p>
+<p><em>Rigorous, anti-overfitting experiments for engineering decisions.</em></p>
+
+<p>Prompt tuning · model selection · retrieval strategies · architecture comparisons.</p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](./LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/clfhaha1234/auto-lab?style=flat-square)](https://github.com/clfhaha1234/auto-lab/stargazers)
@@ -13,13 +15,11 @@
 
 ## ⚡ Why
 
-Most engineering "experiments" leak. You peek at the test set to debug. You pick best-of-N on the same set you'll report from. You tune prompts on the rows the LLM got wrong. You move the metric after seeing the score. Each move is reasonable in the moment — and together they make the conclusion look like science while generalizing worse than a coin flip.
+Most engineering experiments leak. You peek at the test set. You pick best-of-N on the same set you report from. You tune prompts on the rows the LLM got wrong. Each move looks reasonable; together they make the conclusion look like science while generalizing worse than a coin flip.
 
-`auto-lab` is the discipline that closes those leaks: **scientific method applied to fast-moving AI engineering decisions**.
+> **`auto-lab` is the discipline that closes the leaks** — scientific method applied to fast-moving AI engineering decisions.
 
-## 🔄 How it works
-
-A six-phase loop: **Frame → Source → Metric → Run → Diagnose → Conclude**.
+## 🔄 The six phases
 
 ```mermaid
 flowchart LR
@@ -32,49 +32,44 @@ flowchart LR
     V --> C(["Conclusion doc<br/>+ charts"])
 ```
 
-The discipline that ships with it:
-
-- **Held-out test set, sealed until the final pass** — one open, one verdict.
-- **Pre-registered metric + effect-size threshold** — no post-hoc moves.
-- **Pilot N=1 before any full run** — catches instrumentation bugs in 30 seconds.
-- **Variance baseline before celebrating any gap** — a 5pp win with 4pp noise is noise.
-- **3-iteration cap on dev refinement** — past that you're overfitting to dev.
-- **Per-slice verification, not just aggregate** — aggregate winners that lose on major slices are not winners.
+| Built-in discipline | |
+|---|---|
+| Held-out test set | Sealed until Phase 5. Opened **once**. |
+| Pre-registered metric + threshold | Locked in Phase 2. No drift. |
+| Pilot N=1 | Before any full run. Catches instrumentation bugs in 30 seconds. |
+| Variance baseline | Effect must be ≥ 2× within-arm noise. |
+| 3-iteration cap | Past that you're overfitting to dev. |
+| Per-slice verification | Aggregate winners that lose on a major slice are not winners. |
 
 ## 📊 Example output
 
-A complete worked example lives at [`examples/prompt-tuning-classifier/`](./examples/prompt-tuning-classifier/) — three publication-quality figures rendered from a single `data.json`. The example tells one coherent teaching story (see the conclusion doc for the full write-up):
-
-**Phase 3 — arm comparison.** Three arms ran on the dev set; baseline at 61.7%, both candidate arms at ~70.6% (+8.9pp). Within-arm std is ~1.4pp across 3 trials, so the effect clears the 2× variance noise floor.
+A complete worked example lives at [`examples/prompt-tuning-classifier/`](./examples/prompt-tuning-classifier/). Three figures rendered from one `data.json`, telling one coherent teaching story.
 
 ![Phase 3 arm comparison with variance error bars](./examples/prompt-tuning-classifier/charts/arm-bar.png)
 
-**Phase 5 — verdict (the per-slice gotcha).** On the held-out test set, both `prompt-v2` and `prompt-v3` pass the pre-registered aggregate threshold (+8.9pp, CI lower bound +5.0pp). But the per-slice forest plot reveals the trap: `prompt-v3` regresses SMB tenants by -3.3pp (CI `[-8.8, +2.2]`), crossing the pre-registered -2pp loss floor. **Aggregate winner, per-slice loser.** Without the per-slice rule pre-registered in Phase 0, we'd have shipped `v3` and quietly hurt every SMB customer.
+> **Phase 3** — both candidate arms beat baseline by +8.9pp, well above the 2× variance noise floor.
 
 ![Phase 5 effect-size forest plot, aggregate and per-slice](./examples/prompt-tuning-classifier/charts/forest-plot.png)
 
-**Cost view.** `prompt-v2` is the Pareto move: +8.9pp aggregate accuracy at +$0.60 / 1k rows. `prompt-v3` adds +$0.10 more for zero aggregate gain and a per-slice regression.
+> **Phase 5** — both arms clear the aggregate threshold. But `v3` regresses SMB tenants by -3.3pp, crossing the pre-registered loss floor. **Aggregate winner ≠ winner.**
 
-![Cost vs accuracy Pareto](./examples/prompt-tuning-classifier/charts/cost-vs-accuracy.png)
+![Cost vs accuracy Pareto across all arms](./examples/prompt-tuning-classifier/charts/cost-vs-accuracy.png)
 
-Verdict: ship `prompt-v2`. Kill `prompt-v3`. Follow-up question (a separate Phase 0): can amount-direction hints be made slice-conditional?
+> **Cost view** — `v2` is the Pareto move: +8.9pp at +$0.60 / 1k rows. Ship `v2`. Kill `v3`.
 
 ## 🚀 Quick start
 
 ```bash
-# Install (Claude Code)
 git clone https://github.com/clfhaha1234/auto-lab.git ~/.claude/skills/auto-lab
 ```
 
-Then, in any conversation:
+Then ask Claude any "should we use X or Y?" question:
 
-> "Let's compare prompt-v1, prompt-v2, and prompt-v3 on this classifier."
-> "Is Haiku 4.5 good enough here, or do we need Sonnet?"
-> "Should we use BM25, vector, or hybrid retrieval for this RAG?"
+> *"Compare prompt-v1, v2, v3 on this classifier."*
+> *"Is Haiku 4.5 enough here, or do we need Sonnet?"*
+> *"BM25, vector, or hybrid retrieval for this RAG?"*
 
-Claude will walk through Phase 0 (frame the question on paper), sample data, lock the metric, pilot N=1, run dev, diagnose, and produce a conclusion doc with all three charts auto-rendered from `data.json` via `scripts/chart.py`.
-
-### Render charts manually
+Render charts manually:
 
 ```bash
 uv run scripts/chart.py arm-bar          --data data.json --out charts/arm-bar.png
@@ -82,55 +77,37 @@ uv run scripts/chart.py forest-plot      --data data.json --out charts/forest-pl
 uv run scripts/chart.py cost-vs-accuracy --data data.json --out charts/cost-vs-accuracy.png
 ```
 
-PEP 723 inline dependencies — `uv run` provisions matplotlib automatically. `python3 scripts/chart.py ...` also works if matplotlib is installed.
+PEP 723 inline deps — `uv run` provisions matplotlib automatically. `python3 scripts/chart.py …` also works.
 
-## 🧠 What it enforces
+## 🧠 Forbidden moves
 
-The skill encodes 22 rationalizations engineers use to leak data into their conclusions, with explicit counters. A sample of forbidden moves:
+A sample of the 22 rationalizations the skill explicitly blocks. Full set in [SKILL.md](./SKILL.md).
 
-| Anti-pattern | Why it's bad | What to do instead |
-|---|---|---|
-| Tune prompts by reading rows the LLM got wrong **on test** | Training on test → biased upward → real-world regression | Move those rows to dev. Reseal test from new prod data. |
-| Try N prompts, pick best by test-set score | Multiple-comparison bias inflates best-of-N | Pick on dev. Run only the locked winner on test. |
-| Run 10 trials, report best | Cherry-picking noise | Report mean ± stdev across all trials. |
-| Move the metric after seeing the score | The metric was wrong, not the score | Restart Phase 0 with fresh data and a corrected metric. |
-| Add LLM-judge rubric items that favor your arm | Judge is now biased toward your desired conclusion | Lock the rubric in Phase 2, before any arm output is seen. |
-| Iter 3 falsified the hypothesis — let me try iter 4 | The 3-iter cap is the discipline. Falsification is a finished iteration. | Lock the arm, run the test pass, accept the result. |
-
-The full set lives in [SKILL.md](./SKILL.md) — required reading before invoking the skill in anger.
+| Anti-pattern | Why it's bad |
+|---|---|
+| Tune prompts by reading test-set rows the LLM got wrong | Training on test → real-world regression |
+| Try N prompts, pick best by test score | Multiple-comparison bias |
+| Run 10 trials, report best | Cherry-picking noise |
+| Move the metric after seeing the score | The metric was wrong, not the score |
+| Add LLM-judge rubric items that favor your arm | Judge biased toward your desired conclusion |
+| Iter 3 falsified the hypothesis — let me try iter 4 | Falsification is a finished iteration |
 
 ## 🌍 What you can use this for
 
-| Decision type | Example question |
+| Decision | Example question |
 |---|---|
-| Prompt tuning | "Does prompt-v2 beat the baseline classifier across both tenant tiers?" |
-| Model selection | "Can we downgrade from Opus 4.7 to Haiku 4.5 here without losing accuracy?" |
-| Retrieval strategy | "Hybrid (BM25 + vector) vs vector-only vs BM25-only on real customer queries?" |
-| Architecture choice | "One-call vs two-call orchestration for the cleanup workflow?" |
-| Eval methodology | "Same-family judge vs cross-family judge — which gives a more honest verdict?" |
+| Prompt tuning | "Does prompt-v2 beat baseline across both tenant tiers?" |
+| Model selection | "Can we downgrade from Opus to Haiku without losing accuracy?" |
+| Retrieval strategy | "Hybrid vs vector-only vs BM25-only?" |
+| Architecture choice | "One-call vs two-call orchestration?" |
+| Eval methodology | "Same-family vs cross-family judge — which is more honest?" |
 
-Anything you'd write as **"should we use X or Y in production?"** where production data is the ground truth and a "ship or kill" decision is needed within ~1 day.
+Anything phrased as **"should we use X or Y in production?"** with a ship-or-kill decision needed within ~1 day.
 
 ## 🤝 Contributing
 
-Issues and PRs welcome. The skill is intentionally compact (one SKILL.md + one chart helper + templates). Changes should preserve that property.
-
-The highest-value contribution is a **new entry to the "Common Rationalizations" table** — if you've used `auto-lab` for a real decision and a rationalization you encountered isn't already on the list, that's the PR most likely to land.
-
-## 📈 Star history
-
-<a href="https://www.star-history.com/#clfhaha1234/auto-lab&type=date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=clfhaha1234/auto-lab&type=date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=clfhaha1234/auto-lab&type=date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=clfhaha1234/auto-lab&type=date" />
- </picture>
-</a>
+Issues and PRs welcome. Highest-value contribution: a new entry to the *Common Rationalizations* table from a real experience.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
-
----
-
-*If you've shipped a decision the discipline actually changed your mind on, [open an issue](https://github.com/clfhaha1234/auto-lab/issues) — the rationalization table grows from real engagements.*
+[MIT](./LICENSE)
