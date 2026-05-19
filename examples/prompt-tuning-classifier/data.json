@@ -1,0 +1,56 @@
+{
+  "experiment": {
+    "name": "prompt-tuning-classifier",
+    "question": "Does a cross-source prompt outperform the baseline classifier on a B2B SaaS transaction-categorization task?",
+    "metric": "Classification accuracy vs human-labeled ground truth (judge: Claude Sonnet 4.6)",
+    "threshold_pct": 5.0,
+    "threshold_rule": "Aggregate effect >= +5pp AND no per-slice loss > 2pp (CI lower bound)",
+    "test_set_n": 60,
+    "trials_per_arm": 3
+  },
+  "arms": [
+    {"id": "baseline", "name": "prompt-v1 (baseline)", "cost_per_1k_usd": 1.20},
+    {"id": "v2",       "name": "prompt-v2 (+ cross-source signals)", "cost_per_1k_usd": 1.80},
+    {"id": "v3",       "name": "prompt-v3 (+ cross-source + amount hints)", "cost_per_1k_usd": 1.90}
+  ],
+  "slices": [
+    {"id": "enterprise", "name": "Enterprise tenants (n=30)"},
+    {"id": "smb",        "name": "SMB tenants (n=30)"}
+  ],
+  "variance_trials": {
+    "baseline": [0.600, 0.617, 0.633],
+    "v2":       [0.700, 0.717, 0.700],
+    "v3":       [0.717, 0.700, 0.700]
+  },
+  "test_set_aggregate": {
+    "baseline": 0.617,
+    "v2":       0.706,
+    "v3":       0.706
+  },
+  "test_set_per_slice": {
+    "baseline": {"enterprise": 0.633, "smb": 0.600},
+    "v2":       {"enterprise": 0.767, "smb": 0.667},
+    "v3":       {"enterprise": 0.833, "smb": 0.567}
+  },
+  "effect_sizes": {
+    "v2": {
+      "aggregate": {"delta": 0.089, "ci_low": 0.050, "ci_high": 0.128},
+      "per_slice": {
+        "enterprise": {"delta": 0.134, "ci_low": 0.079, "ci_high": 0.189},
+        "smb":        {"delta": 0.067, "ci_low": 0.012, "ci_high": 0.122}
+      }
+    },
+    "v3": {
+      "aggregate": {"delta": 0.089, "ci_low": 0.050, "ci_high": 0.128},
+      "per_slice": {
+        "enterprise": {"delta": 0.200, "ci_low": 0.145, "ci_high": 0.255},
+        "smb":        {"delta": -0.033, "ci_low": -0.088, "ci_high": 0.022}
+      }
+    }
+  },
+  "verdict": {
+    "winner": "v2",
+    "killed": ["v3"],
+    "rationale": "v2 passes the aggregate threshold (+8.9pp, CI lower bound +5.0pp == registered threshold) AND both per-slice rules (Enterprise +13.4pp, SMB +6.7pp; both CI lower bounds positive). v3 also passes aggregate but FAILS the per-slice rule on SMB (-3.3pp, CI [-8.8pp, +2.2pp] crosses both zero and the -2pp loss floor). Aggregate winners are not winners when a major slice regresses. Ship v2; kill v3."
+  }
+}

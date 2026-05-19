@@ -9,6 +9,17 @@ description: Use when comparing competing approaches (prompts, architectures, mo
 
 A disciplined experimental-comparison loop: **Frame → Source → Metric → Run → Diagnose → Conclude**. The pivot is **scientific method applied to engineering decisions**: hypothesis-first, baseline + arms, real production data, held-out test set, capped iterations.
 
+```mermaid
+flowchart LR
+    F["Phase 0<br/>Frame"] --> S["Phase 1<br/>Source + Split"]
+    S --> M["Phase 2<br/>Metric"]
+    M --> R["Phase 3<br/>Run on dev"]
+    R --> D["Phase 4<br/>Diagnose"]
+    D -->|"≤3 iter<br/>ONE change per iter"| R
+    D --> V["Phase 5<br/>Verdict on<br/>held-out test"]
+    V --> C(["Conclusion doc<br/>+ charts"])
+```
+
 **Core principle:** *Conclusions must come from data the experiment didn't tune on.* Anything else is overfitting wearing a science costume.
 
 ## When to Use
@@ -194,17 +205,41 @@ After arms are locked from Phase 4:
 
 **All of these mean: STOP, return to Phase 5 with current arms, write the conclusion.**
 
+## Visualization Output
+
+After Phase 3 and Phase 5, generate the canonical figures via `scripts/chart.py`. The helper reads a single `data.json` (per-arm aggregates, per-slice break-down, variance trials, cost) and renders three publication-quality PNGs:
+
+| Chart | Phase | Purpose |
+|---|---|---|
+| `arm-bar` | 3 | Per-arm aggregate score with variance error bars; pre-registered threshold drawn as a dashed reference line. |
+| `forest-plot` | 5 | Per-arm effect size with 95% CI plus per-slice break-down. Aggregate threshold + per-slice loss floor drawn as reference lines; any slice whose CI crosses the loss floor renders in red. |
+| `cost-vs-accuracy` | 3-5 | Cost vs accuracy Pareto scatter across all arms. |
+
+Invocation (uv reads the script's PEP 723 inline-deps header and provisions an isolated matplotlib env automatically — no pip step needed):
+
+```bash
+uv run scripts/chart.py arm-bar          --data data.json --out charts/arm-bar.png
+uv run scripts/chart.py forest-plot      --data data.json --out charts/forest-plot.png
+uv run scripts/chart.py cost-vs-accuracy --data data.json --out charts/cost-vs-accuracy.png
+```
+
+`python3 scripts/chart.py ...` works as a fallback if `matplotlib` is already installed.
+
+The `data.json` schema and a complete worked example (Phase 0 frame, conclusion doc, all 3 PNGs) live at `examples/prompt-tuning-classifier/`. Use it as the structural template when scoring your own arms — copy the schema, populate the fields, run the helper, drop the PNGs into the conclusion doc.
+
 ## Output: The Conclusion Document
 
-End every experiment with a short doc (markdown, ~200 words) that includes:
+End every experiment with a markdown doc that embeds the three charts above. Use `templates/conclusion.md.tmpl` as the starting structure. The doc includes:
 
 1. **The question** (verbatim from Phase 0)
 2. **Baseline + arm definitions** (file:line for each)
 3. **Metric + threshold** (pre-registered)
-4. **Test-set scores** (one table)
-5. **Verdict** ("ship arm B" / "kill arms / needs redesign")
-6. **What you'd want to test next** (one sentence) — NOT "let me run another iteration"
-7. **Discipline self-audit** (checklist — at least the items below, ✅/❌ each):
+4. **Phase 3 — dev-set scores** (one paragraph + the `arm-bar` chart)
+5. **Phase 4 — diagnostic notes** (one paragraph per iteration: hypothesis going in, what the per-row diffs showed, supported / neutral / falsified)
+6. **Phase 5 — verdict** (one table + the `forest-plot` chart + one paragraph citing the pre-registered rule)
+7. **Cost view** (one sentence + the `cost-vs-accuracy` chart)
+8. **What you'd want to test next** (one sentence) — NOT "let me run another iteration"
+9. **Discipline self-audit** (checklist — at least the items below, ✅/❌ each):
    - Test set sealed until Phase 5; opened ONCE
    - Pre-registered metric + threshold; no metric drift
    - Pilot run validated all metric fields populated before full dev run
@@ -219,9 +254,9 @@ End every experiment with a short doc (markdown, ~200 words) that includes:
    - Verdict locks LATEST hypothesis-driven iter, not best-scoring iter
    - Per-slice scores reported (not just aggregate); aggregate winners must hold on major slices
 
-Save as `docs/experiments/YYYY-MM-DD-<topic>.md` and commit. **Write Phase 0 + 1 + 2 sections (frame, splits, metric) FIRST, with placeholders for results.** Then fill the placeholders as data comes in. Writing frame after seeing scores is how p-hacking enters.
+Save as `docs/experiments/YYYY-MM-DD-<topic>/` with `frame.md` (Phase 0), `data.json` (the canonical scores file consumed by `scripts/chart.py`), `conclusion.md` (filled from the template), and `charts/*.png` (rendered). Commit. **Write Phase 0 + 1 + 2 sections (frame, splits, metric) FIRST, with placeholders for results.** Then fill the placeholders as data comes in. Writing frame after seeing scores is how p-hacking enters.
 
-The doc is the experiment's only output: code is throw-away, the conclusion is what compounds.
+The doc + charts are the experiment's only output: code is throw-away, the conclusion is what compounds.
 
 ## Discovery Workflow
 
