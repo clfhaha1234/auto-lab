@@ -13,13 +13,39 @@
 
 </div>
 
-## ⚡ Why
+## About
 
-Most engineering experiments leak. You peek at the test set. You pick best-of-N on the same set you report from. You tune prompts on the rows the LLM got wrong. Each move looks reasonable; together they make the conclusion look like science while generalizing worse than a coin flip.
+`auto-lab` is a Claude Code skill that turns "should we use X or Y?" engineering decisions into rigorous, anti-overfitting experiments. It encodes a six-phase scientific-method loop — **Frame → Source → Metric → Run → Diagnose → Conclude** — and surrounds it with twenty-two explicit guards against the exact rationalizations engineers use to leak data into their own conclusions. The skill ships with a matplotlib helper that renders three publication-quality figures from a single `data.json`, so every verdict comes with a Phase 3 arm-comparison, a Phase 5 effect-size forest plot with per-slice break-down, and a cost-vs-accuracy Pareto view. Use it when production data is the ground truth and a ship-or-kill decision is needed within a day.
 
-> **`auto-lab` is the discipline that closes the leaks** — scientific method applied to fast-moving AI engineering decisions.
+## Key Features
 
-## 🔄 The six phases
+**01. Held-out test discipline.** Test set sealed until Phase 5. Opened once.
+
+**02. Pre-registered metric + threshold.** Locked in Phase 2. No post-hoc drift.
+
+**03. Pilot N=1 instrumentation check.** Catches null / placeholder metric fields in 30 seconds, before a 5-minute full run wastes the iteration.
+
+**04. Variance-floor noise check.** Effect must clear **2× within-arm std**, not just the registered threshold — a 5pp win with 4pp noise is noise.
+
+**05. Three-iteration cap on dev refinement.** Past iter 3 you're overfitting to dev. Each iter changes ONE thing.
+
+**06. Per-slice verification.** Aggregate winners that lose on a major tenant slice are not winners. Either ship narrowly, or kill.
+
+**07. Publication-quality charts.** Three matplotlib figures auto-rendered from `data.json`: `arm-bar`, `forest-plot`, `cost-vs-accuracy`.
+
+## Use Cases
+
+**01.** Stress-testing a new prompt before promoting it to production.
+
+**02.** Comparing model choices (Haiku vs Sonnet vs Opus) when cost and accuracy both matter.
+
+**03.** Choosing between retrieval strategies (BM25 / vector / hybrid) on real customer queries.
+
+**04.** Deciding between architectures (single-call vs two-call orchestration, sync vs queued).
+
+**05.** Auditing eval methodology (same-family vs cross-family judge, locked vs free-form rubric).
+
+## The Six Phases
 
 ```mermaid
 flowchart LR
@@ -32,18 +58,21 @@ flowchart LR
     V --> C(["Conclusion doc<br/>+ charts"])
 ```
 
-| Built-in discipline | |
-|---|---|
-| Held-out test set | Sealed until Phase 5. Opened **once**. |
-| Pre-registered metric + threshold | Locked in Phase 2. No drift. |
-| Pilot N=1 | Before any full run. Catches instrumentation bugs in 30 seconds. |
-| Variance baseline | Effect must be ≥ 2× within-arm noise. |
-| 3-iteration cap | Past that you're overfitting to dev. |
-| Per-slice verification | Aggregate winners that lose on a major slice are not winners. |
+**01. Frame.** Write the question, hypothesis, baseline, arms, and stop conditions — on paper, before touching data.
 
-## 📊 Example output
+**02. Source + Split.** Sample from production. Partition into ~30% train / ~50% dev / ~20% sealed test.
 
-A complete worked example lives at [`examples/prompt-tuning-classifier/`](./examples/prompt-tuning-classifier/). Three figures rendered from one `data.json`, telling one coherent teaching story.
+**03. Metric.** Pre-register the primary metric and effect-size threshold. Lock the LLM-judge rubric.
+
+**04. Run.** Pilot N=1 first. Then full dev run with a variance baseline (≥3 trials) and a cross-judge sanity check on 5 dev rows.
+
+**05. Diagnose.** Per-row diffs. ≤3 refinement iterations, each changing ONE thing.
+
+**06. Verdict.** One pass on the held-out test set. Per-slice scores. Ship or kill — no re-runs.
+
+## Example Output
+
+A complete worked example lives at [`examples/prompt-tuning-classifier/`](./examples/prompt-tuning-classifier/) — three figures rendered from one `data.json`, telling one coherent teaching story.
 
 ![Phase 3 arm comparison with variance error bars](./examples/prompt-tuning-classifier/charts/arm-bar.png)
 
@@ -57,7 +86,21 @@ A complete worked example lives at [`examples/prompt-tuning-classifier/`](./exam
 
 > **Cost view** — `v2` is the Pareto move: +8.9pp at +$0.60 / 1k rows. Ship `v2`. Kill `v3`.
 
-## 🚀 Quick start
+## Rules
+
+**Never peek at the test set.** A single peek contaminates the row and biases your judgment of every neighbor.
+
+**One thing per iteration.** Change two variables at once and you can't attribute the win.
+
+**Falsification is finished.** When iter 3 disproves the hypothesis, lock the arm and run the test pass. Trying iter 4 is overfitting to dev.
+
+**Aggregate wins don't override per-slice losses.** Either ship narrowly to the slice that wins, or kill.
+
+**Lock the latest hypothesis-driven iter, not the highest-scoring one.** Picking by dev score is multi-iteration multiple-comparison bias.
+
+A sample of the twenty-two forbidden moves the skill blocks. Full set in [SKILL.md](./SKILL.md).
+
+## Quick Start
 
 ```bash
 git clone https://github.com/clfhaha1234/auto-lab.git ~/.claude/skills/auto-lab
@@ -79,34 +122,29 @@ uv run scripts/chart.py cost-vs-accuracy --data data.json --out charts/cost-vs-a
 
 PEP 723 inline deps — `uv run` provisions matplotlib automatically. `python3 scripts/chart.py …` also works.
 
-## 🧠 Forbidden moves
+## FAQ
 
-A sample of the 22 rationalizations the skill explicitly blocks. Full set in [SKILL.md](./SKILL.md).
+**What is the auto-lab skill for Claude Code?**
+A planning + execution capability that runs rigorous, anti-overfitting experiments for "should we use X or Y?" engineering decisions. Six phases, twenty-two forbidden moves, three publication-quality charts.
 
-| Anti-pattern | Why it's bad |
-|---|---|
-| Tune prompts by reading test-set rows the LLM got wrong | Training on test → real-world regression |
-| Try N prompts, pick best by test score | Multiple-comparison bias |
-| Run 10 trials, report best | Cherry-picking noise |
-| Move the metric after seeing the score | The metric was wrong, not the score |
-| Add LLM-judge rubric items that favor your arm | Judge biased toward your desired conclusion |
-| Iter 3 falsified the hypothesis — let me try iter 4 | Falsification is a finished iteration |
+**Does auto-lab work with non-Claude models?**
+Yes. The skill is model-agnostic — it tells Claude Code what discipline to enforce, but the arms you compare can be any models, any providers, any prompt / retrieval / architecture variants.
 
-## 🌍 What you can use this for
+**Why three iterations max?**
+Past iter 3 on the dev set, each "refinement" is overfitting to dev rather than finding signal. Empirically, iters 1-2 surface real bugs in the arm; iter 3 is hypothesis-driven; iter 4+ is metric-chasing.
 
-| Decision | Example question |
-|---|---|
-| Prompt tuning | "Does prompt-v2 beat baseline across both tenant tiers?" |
-| Model selection | "Can we downgrade from Opus to Haiku without losing accuracy?" |
-| Retrieval strategy | "Hybrid vs vector-only vs BM25-only?" |
-| Architecture choice | "One-call vs two-call orchestration?" |
-| Eval methodology | "Same-family vs cross-family judge — which is more honest?" |
+**How is this different from a Jupyter notebook with matplotlib?**
+A notebook lets you do anything. `auto-lab` forbids the specific things that look reasonable but contaminate your conclusion — peeking at test, picking best-of-N on test, moving the metric after the score, dropping rows that score badly. The discipline is the value; the charts are a side effect.
 
-Anything phrased as **"should we use X or Y in production?"** with a ship-or-kill decision needed within ~1 day.
+**Can I use this on experiments I've already run?**
+Use it on the *next* decision. For already-run experiments where the test set was peeked at during debugging, the test set is contaminated for that question — reseal from fresh production data before running `auto-lab` on it.
 
-## 🤝 Contributing
+**Does the chart helper require Python?**
+Yes. `scripts/chart.py` uses matplotlib via a PEP 723 inline-deps header — `uv run` provisions an isolated env automatically; `python3` works as fallback if matplotlib is already installed. The skill itself (the discipline + conclusion doc) works without Python.
 
-Issues and PRs welcome. Highest-value contribution: a new entry to the *Common Rationalizations* table from a real experience.
+## Contributing
+
+Issues and PRs welcome. The highest-value contribution is a new entry to the *Common Rationalizations* table in [SKILL.md](./SKILL.md) from a real experience.
 
 ## License
 
