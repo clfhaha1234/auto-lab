@@ -47,16 +47,7 @@
 
 ## The Six Phases
 
-```mermaid
-flowchart LR
-    F["Phase 0<br/>Frame"] --> S["Phase 1<br/>Source + Split"]
-    S --> M["Phase 2<br/>Metric"]
-    M --> R["Phase 3<br/>Run on dev"]
-    R --> D["Phase 4<br/>Diagnose"]
-    D -->|"≤3 iter<br/>ONE change per iter"| R
-    D --> V["Phase 5<br/>Verdict on<br/>held-out test"]
-    V --> C(["Conclusion doc<br/>+ charts"])
-```
+![The Six Phases of a Rigorous Experiment](./docs/images/six-phases.png)
 
 **01. Frame.** Write the question, hypothesis, baseline, arms, and stop conditions — on paper, before touching data.
 
