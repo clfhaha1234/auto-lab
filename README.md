@@ -102,6 +102,22 @@ Five real failure modes, drawn from actual shipped-and-regressed AI products:
 
 Each one is a specific anti-pattern with a specific safeguard. Other guards include held-out test sealing, pre-registered metrics, variance-floor noise checks, the generalization gate, cross-judge sanity checks, and a per-slice loss floor. The full list — plus a "Common Rationalizations" table cataloging the excuses engineers reach for in the moment — lives in [SKILL.md](./SKILL.md).
 
+## How it fits in
+
+Several solid tools exist for *running* evals — [Promptfoo](https://promptfoo.dev), [Inspect](https://inspect.aisi.org.uk), [LangSmith Evals](https://docs.smith.langchain.com), [OpenAI Evals](https://github.com/openai/evals). They give you the numbers. `auto-itera` is built for what comes *after* the numbers — the discipline that prevents the numbers from lying to you.
+
+| What's unique to `auto-itera` | Why it matters |
+|---|---|
+| **Held-out test sealed + metric pre-registered** by default | "saw the score, edited the metric, re-ran" is structurally forbidden, not just discouraged |
+| **Sprint + generalization gate** between iteration rounds | strips dev-set memorization before each new sprint; iter-3 hardcodes get rejected before they reach the test set |
+| **Per-slice loss floor** | aggregate winner that regresses a major tenant slice is rejected automatically — no aggregate-winner-ships-and-quietly-breaks-SMB story |
+| **One-shot test pass** | the sealed test set opens ONCE; conclusion doc + 3 charts + discipline self-audit is the output |
+| **Runs inside Claude Code** | no separate CLI / dashboard to maintain; `git clone` and ask a question |
+
+**The other tools all support pieces of this opt-in.** `auto-itera`'s value is making the discipline the default — and refusing to let you skip it mid-flight when the dev-set scores look exciting.
+
+If you need a hosted eval dashboard with prompts in a UI, use LangSmith. If you need pre-built safety benchmarks, use Inspect. **If you need a defensible ship-or-kill verdict on real production data in the next afternoon, that's `auto-itera`'s lane.**
+
 ## Example output
 
 A complete worked example lives at [`examples/prompt-tuning-classifier/`](./examples/prompt-tuning-classifier/) — three figures rendered from one `data.json`, telling one coherent teaching story.
@@ -129,19 +145,53 @@ Teams **shipping LLM products** who need decisions that survive production:
 
 If you're a solo dev experimenting in a notebook, you can skip this. If you have customers depending on whether your AI decisions are right, you can't.
 
-## Quick Start
+## Quick Start — your first experiment in 5 minutes
+
+### 1. Install
 
 ```bash
 git clone https://github.com/clfhaha1234/auto-itera.git ~/.claude/skills/auto-itera
 ```
 
-Then ask Claude any "should we use X or Y?" question:
+That's it. `auto-itera` is now a Claude Code skill. No other dependencies until you want to render charts standalone.
 
-> *"Compare prompt-v1, v2, v3 on this classifier."*
-> *"Is Haiku 4.5 enough here, or do we need Sonnet?"*
-> *"BM25, vector, or hybrid retrieval for this RAG?"*
+### 2. Open Claude Code in any project and paste a real comparison question
 
-Render charts manually:
+The format that triggers the skill cleanly: state the **goal**, spell out the **candidates** (baseline + 1–3 alternatives), and **pre-register the threshold** before any data is sampled.
+
+> *I want to evaluate two versions of my classifier system prompt.*
+>
+> *Baseline (`prompt-v1`): current production prompt at `src/classify/processor.ts:42`.*
+> *Candidate (`prompt-v2`): same prompt + an extra sentence: "When the input mentions a payment processor (Stripe, PayPal, Square), classify as 'fees' not 'transfer'."*
+>
+> *I have ~200 real production rows in `data/classifier-eval.csv` with human-labeled ground truth in the `expected_label` column. About 60% are enterprise tenants and 40% SMB.*
+>
+> *Ship criterion: ≥+5pp aggregate accuracy AND no per-tenant slice regresses more than -2pp.*
+
+### 3. Watch the autonomous loop run
+
+`auto-itera` does the rest:
+
+1. **Writes the Phase 0 frame** as a markdown table — your question, the two arms, the metric, the threshold. Asks ONCE if anything's wrong; otherwise locks it.
+2. **Splits your 200 rows** stratified by tenant tier — ~60 train / ~100 dev / ~40 sealed test. Prints a distribution audit so the split matches your prod traffic mix.
+3. **Runs a 1-row pilot** to catch instrumentation bugs before the full run wastes 5 minutes.
+4. **Scores baseline + v2 in parallel** on dev. Reports aggregate + per-slice + variance (≥3 trials per arm). Cross-judge sanity check on 5 rows with a 2nd-family model.
+5. **Sprint, if needed** — up to 3 iterations of "diagnose per-row → hypothesis → tweak the arm → re-score". Generalization gate strips dev-set memorization. Continue or lock.
+6. **One pass on the sealed test set.** Per-slice scores. Verdict: ship `v2`, ship narrowly to one slice, or kill.
+7. **Writes the conclusion doc** to `docs/experiments/YYYY-MM-DD-<topic>/` — three publication-quality charts embedded, full discipline self-audit checklist signed off.
+
+Wall clock on a 200-row dataset: typically **5–15 minutes**. Most of that is LLM scoring; Claude's thinking is a tiny fraction.
+
+### 4. What you don't need
+
+- No API keys to configure (uses whatever Claude Code already has)
+- No separate dashboard / hosted service
+- No YAML config files
+- No Python (unless you want to render charts standalone — see below)
+
+### Optional: re-render charts from a saved data.json
+
+If you want to regenerate the three figures from an already-completed experiment's `data.json`:
 
 ```bash
 uv run scripts/chart.py arm-bar          --data data.json --out charts/arm-bar.png
@@ -149,7 +199,7 @@ uv run scripts/chart.py forest-plot      --data data.json --out charts/forest-pl
 uv run scripts/chart.py cost-vs-accuracy --data data.json --out charts/cost-vs-accuracy.png
 ```
 
-Re-render the loop diagram (if you fork and want a customized version):
+Re-render the loop diagram in this README (if you fork and want a customized version):
 
 ```bash
 uv run scripts/render-loop-diagram.py --out docs/images/autonomous-loop.png
