@@ -5,7 +5,7 @@
 #     "matplotlib>=3.8",
 # ]
 # ///
-"""auto-lab chart helper.
+"""auto-itera chart helper.
 
 Reads a single data.json (per-arm aggregates + variance + cost) and renders
 one of three publication-quality figures:

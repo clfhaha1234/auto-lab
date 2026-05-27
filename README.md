@@ -1,52 +1,40 @@
 <div align="center">
 
-![auto-lab banner](./docs/images/banner.png)
+![auto-itera banner](./docs/images/banner.png)
 
-# 🧪 auto-lab
+# 🧪 auto-itera
 
-<p><strong>Stop fooling yourself with AI evals.</strong></p>
+<p><strong>The scientific method for AI engineering decisions.</strong></p>
 
-<p><em>A Claude Code skill that turns "should we use X or Y?" into a rigorous experiment — with 22 built-in guards against the ways engineers accidentally lie to themselves.</em></p>
+<p><em>Set a goal. Define candidate approaches. Run a rigorous experiment. Get a ship-or-kill verdict in hours — with statistical confidence and built-in honesty checks.</em></p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](./LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/clfhaha1234/auto-lab?style=flat-square)](https://github.com/clfhaha1234/auto-lab/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/clfhaha1234/auto-lab?style=flat-square)](https://github.com/clfhaha1234/auto-lab/network)
+[![GitHub stars](https://img.shields.io/github/stars/clfhaha1234/auto-itera?style=flat-square)](https://github.com/clfhaha1234/auto-itera/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/clfhaha1234/auto-itera?style=flat-square)](https://github.com/clfhaha1234/auto-itera/network)
 [![Claude Code skill](https://img.shields.io/badge/Claude%20Code-skill-D77757?style=flat-square)](https://docs.claude.com/en/docs/claude-code/skills)
 
 </div>
 
-## The problem
+## What it does
 
-Every team shipping an LLM product asks the same questions:
+Every team shipping an LLM product has decisions like these on the table:
 
 - Should we switch from Sonnet to Opus?
-- Is RAG actually helping, or is it just adding latency?
-- Did that prompt tuning round move the needle, or did we overfit the eval?
-- Why does production keep regressing after "winning" benchmarks?
+- Is RAG actually helping, or just adding latency?
+- Did that prompt tuning round move the needle?
+- Which of these three retrieval strategies wins on real customer queries?
 
-Most teams answer them with vibes, eyeballed diffs, or benchmarks they've quietly tuned the system against. The result is always the same shape: a *"+12% improvement"* that drops 8% the week it hits production.
+`auto-itera` turns each of these into a **rigorous experiment** that returns a defensible verdict in hours:
 
-**Your eval is probably lying. You just don't know which way yet.**
+1. **Frame** the question + competing arms + pre-registered success threshold.
+2. **Source** real production data; split into train / dev / sealed test.
+3. **Run** baseline + arms in parallel; measure aggregate, per-slice, variance, and cost.
+4. **Iterate** in disciplined 3-iteration sprints, each followed by a generalization gate that strips out dev-set memorization before the next sprint.
+5. **Verdict** on the held-out test set — one pass, no re-runs. Ship the winner, scope it to the slice that wins, or kill.
 
-`auto-lab` turns these decisions into rigorous experiments with built-in guards against leakage, cherry-picking, slice collapse, and benchmark gaming. Instead of vibe-based evals, you get a statistically grounded **ship-or-kill verdict in hours** — and a one-page conclusion doc that anyone can audit.
+The output is a **one-page conclusion doc** with three publication-quality figures (`arm-bar`, `forest-plot`, `cost-vs-accuracy`) that anyone — your team, a CTO, a future-you in 3 months — can audit.
 
-## What it catches
-
-Five real failure modes, drawn from actual shipped-and-regressed AI products:
-
-| What the team would have shipped | What `auto-lab` caught |
-|---|---|
-| *"Prompt v3 is +12% on eval. Ship it."* | v3's "improvement" came from rows the engineer read during debugging — test set was contaminated. Production regressed 8%. |
-| *"GPT-4o beat Claude on our 50-row eval."* | Eval too small. The gap was 5pp, within-arm noise was 4pp. Not a real signal. |
-| *"Aggregate accuracy up 6pp across all customers."* | One major tenant slice regressed -8pp. Aggregate winners are not winners when one slice loses. |
-| *"Best-of-5 trial: 91% accuracy."* | Mean was 84% ± 4pp. Best-of-N is biased high by ~√log N. The team was reporting noise. |
-| *"New rubric finally captures what matters."* | The rubric was rewritten *after* seeing scores. It happened to favor the arm they wanted to win. |
-
-Each one is a specific anti-pattern with a specific safeguard. There are **22 in total**, listed in [SKILL.md](./SKILL.md).
-
-## How it works
-
-A six-phase scientific-method loop — with the test set sealed until the final verdict.
+## The six phases
 
 ![The Six Phases of a Rigorous Experiment](./docs/images/six-phases.png)
 
@@ -58,31 +46,41 @@ A six-phase scientific-method loop — with the test set sealed until the final 
 
 **04. Run.** Pilot N=1 first. Then full dev run with a variance baseline (≥3 trials) and a cross-judge sanity check on 5 dev rows.
 
-**05. Diagnose.** Per-row diffs. ≤3 refinement iterations, each changing ONE thing.
+**05. Diagnose.** Per-row diffs. Sprint up to 3 iterations, each changing ONE thing. Run the generalization gate. Continue or lock.
 
 **06. Verdict.** One pass on the held-out test set. Per-slice scores. Ship or kill — no re-runs.
 
-Production data is the ground truth. Eval-set wins that don't survive a held-out test set are rejected before they ship.
+## The sprint-and-generalize loop
 
-## 22 anti-self-deception safeguards
+The core of Phase 5 — and the thing most "vibes-based eval" workflows skip:
 
-The discipline is the product. A sample:
+```
+iterate × up to 3
+   ↓
+generalization gate
+   ↓
+   ├──  every change is a universal mechanism (or got promoted to one) → start next sprint
+   ├──  dev signal saturated → lock and run Phase 6 verdict
+   └──  changes were mostly "if input X return Y" hardcodes → kill this arm
+```
 
-**Held-out test discipline.** Test set sealed until Phase 5. Opened once, no peeking, no re-runs.
+The 3 inside a sprint is a working-memory cap (humans can't reliably attribute outcomes across more than ~3 simultaneous hypothesis edits). The gate between sprints is what separates **principled iteration** (finding deeper mechanisms) from **dev-set memorization** (adding rules that win specific rows but won't survive Phase 6).
 
-**Pre-registered metric + threshold.** Locked in Phase 2. No post-hoc drift, no rubric edits after seeing scores.
+Most decisions converge in 1–2 sprints. Past 3 sprints, the prior shifts strongly to "the gate is failing to catch dev-memorization" — the rule isn't "stop iterating," it's "audit the gate harder before continuing."
 
-**Pilot N=1 instrumentation check.** Catches null / placeholder metric fields in 30 seconds, before a 5-minute full run wastes the iteration.
+## What it guards against
 
-**Variance-floor noise check.** Effect must clear **2× within-arm std**, not just the registered threshold — a 5pp win with 4pp noise is noise.
+Five real failure modes drawn from actual shipped-and-regressed AI products. The framework's 22 explicit guards exist because each of these has happened, repeatedly:
 
-**Three-iteration cap on dev refinement.** Past iter 3 you're overfitting to dev. Each iter changes ONE thing.
+| What the team would have shipped | What `auto-itera` caught |
+|---|---|
+| *"Prompt v3 is +12% on eval. Ship it."* | The "improvement" came from rows the engineer read during debugging. Test set was contaminated. Production regressed 8%. |
+| *"GPT-4o beat Claude on our 50-row eval."* | Eval too small. Gap was 5pp, within-arm noise was 4pp. Not a real signal. |
+| *"Aggregate accuracy up 6pp across all customers."* | One major tenant slice regressed -8pp. Aggregate winners are not winners when a major slice loses. |
+| *"Best-of-5 trial: 91% accuracy."* | Mean was 84% ± 4pp. Best-of-N is biased high by ~√log N. |
+| *"New rubric finally captures what matters."* | Rubric was rewritten *after* seeing scores. It happened to favor the arm they wanted to win. |
 
-**Per-slice verification.** Aggregate winners that lose on a major tenant slice are not winners. Either ship narrowly, or kill.
-
-**Cross-judge sanity check.** Spot-check 5 rows with a different model family. Catches self-judging bias before it skews the verdict.
-
-The full list — including the "common rationalizations" engineers reach for and the structural reasons each one fails — lives in [SKILL.md](./SKILL.md).
+Each one is a specific anti-pattern with a specific safeguard. There are **22 in total**, plus a "Common Rationalizations" table cataloging the excuses engineers reach for in the moment. Both lists live in [SKILL.md](./SKILL.md).
 
 ## Who this is for
 
@@ -119,18 +117,18 @@ Every experiment ends with a one-page conclusion doc embedding these three chart
 
 **One thing per iteration.** Change two variables at once and you can't attribute the win.
 
-**Falsification is finished.** When iter 3 disproves the hypothesis, lock the arm and run the test pass. Trying iter 4 is overfitting to dev.
+**Falsification is a finished iteration, not a "try harder" signal.** When iter 3 of a sprint disproves the hypothesis, run the gate, then decide whether to start a new sprint with a fresh hypothesis or lock and run Phase 6.
 
 **Aggregate wins don't override per-slice losses.** Either ship narrowly to the slice that wins, or kill.
 
-**Lock the latest hypothesis-driven iter, not the highest-scoring one.** Picking by dev score is multi-iteration multiple-comparison bias.
+**Lock the latest gate-passed iter, not the highest-scoring one.** Picking by dev score is multi-iteration multiple-comparison bias.
 
 These are a sample of the 22 forbidden moves the skill blocks. Full set in [SKILL.md](./SKILL.md).
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/clfhaha1234/auto-lab.git ~/.claude/skills/auto-lab
+git clone https://github.com/clfhaha1234/auto-itera.git ~/.claude/skills/auto-itera
 ```
 
 Then ask Claude any "should we use X or Y?" question:
@@ -151,20 +149,20 @@ PEP 723 inline deps — `uv run` provisions matplotlib automatically. `python3 s
 
 ## FAQ
 
-**What is `auto-lab` actually doing?**
-Enforcing the experimental discipline that AI teams know they should follow but skip because it's tedious. The skill makes Claude Code refuse the shortcuts — no test-set peeks, no rubric edits after seeing scores, no best-of-N reporting, no iter-4-because-I-feel-close. The 22 guards are the product. The charts are a side effect.
+**What is `auto-itera` actually doing?**
+Running the experimental discipline that AI teams know they should follow but skip because it's tedious. Pre-register the metric. Hold the test set sealed. Iterate in disciplined sprints. Strip out dev-set memorization between sprints via the generalization gate. Pick the latest gate-passed iter, not the highest-scoring one. Ship by the held-out test, not the dev set. The 22 guards make the discipline mechanical; the charts are a side effect.
 
 **Does this work with non-Claude models?**
 Yes. The skill is model-agnostic — it tells Claude Code what discipline to enforce, but the arms you compare can be any models, any providers, any prompt / retrieval / architecture variants.
 
-**Why three iterations max?**
-Past iter 3 on the dev set, each "refinement" is overfitting to dev rather than finding signal. Empirically, iters 1–2 surface real bugs in the arm; iter 3 is hypothesis-driven; iter 4+ is metric-chasing dressed up as engineering.
+**Why a 3-iteration sprint cap, not a hard "stop at 3" rule?**
+3 is a working-memory cap — humans can't reliably attribute outcomes across more than ~3 simultaneous hypothesis edits inside a single sprint. But iteration itself isn't the enemy; *un-audited* iteration is. After each sprint, the generalization gate strips out dev-set memorization (any `if input X return Y` rule that wins specific rows but isn't a real mechanism). If the gate passes and dev signal isn't saturated, you start a fresh sprint. Most decisions converge in 1–2 sprints. Past 3 sprints, the prior shifts strongly toward "the gate is failing to catch dev-memorization" — and the right move is to audit the gate, not to keep iterating.
 
 **How is this different from a Jupyter notebook with matplotlib?**
-A notebook lets you do anything — including all the things that quietly bias your conclusion. `auto-lab` forbids the specific moves that look reasonable but contaminate the verdict: peeking at test, picking best-of-N on test, moving the metric after the score, dropping rows that score badly. The discipline is what you can't get from a notebook.
+A notebook lets you do anything — including all the things that quietly bias your conclusion. `auto-itera` makes the discipline mechanical: forbids peeking at test, forbids picking best-of-N on test, forbids moving the metric after the score, forbids skipping the generalization gate between sprints. The discipline is what you can't get from a notebook.
 
 **Can I use this on experiments I've already run?**
-Use it on the *next* decision. For already-run experiments where the test set was peeked at during debugging, the test set is contaminated for that question — reseal from fresh production data before running `auto-lab` on it.
+Use it on the *next* decision. For already-run experiments where the test set was peeked at during debugging, the test set is contaminated for that question — reseal from fresh production data before running `auto-itera` on it.
 
 **Does the chart helper require Python?**
 Yes. `scripts/chart.py` uses matplotlib via a PEP 723 inline-deps header — `uv run` provisions an isolated env automatically; `python3` works as fallback if matplotlib is already installed. The skill itself (the discipline + conclusion doc) works without Python.
