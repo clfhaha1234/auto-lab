@@ -49,11 +49,22 @@ The output: a one-page conclusion doc embedding `arm-bar`, `forest-plot`, and `c
 
 ## Honest expectation boundary
 
-> `auto-itera` automates everything *between* candidates-and-criterion and verdict. It does NOT autonomously brainstorm what to test.
+> `auto-itera` automates the experimental **execution + iteration**. The evaluation **criteria** stay with you, by design.
 
-You — or Claude, if you ask it — still write the candidate prompts, pick the model versions to compare, and define the success threshold. `auto-itera` then takes that search space and runs the experiment to a defensible result. Think of it as **an autonomous experiment runner, not an autonomous AI scientist that invents hypotheses from scratch**.
+**You provide (3 pre-registered inputs):**
+- Candidate arms — the concrete prompts / models / strategies to compare
+- Metric + judge — what counts as "better" and who scores it
+- Threshold + per-slice loss floor — what counts as "ship-worthy"
 
-This boundary is what keeps the verdict trustworthy: the human commits to a falsifiable hypothesis upfront, and the loop is honest about whether the evidence supports it.
+**`auto-itera` auto-designs and runs (everything else):**
+- Sampling strategy + train/dev/test splits sized to your effect threshold
+- Parallel scoring with variance baseline + cross-judge sanity check
+- Per-row diagnosis, hypothesis-driven sprints, generalization gate
+- Held-out test pass + per-slice verdict + conclusion doc
+
+The split is deliberate, not a capability gap. **A metric the system picks for itself is a metric the system can drift toward** — letting the evaluator design its own grading rubric is how teams accidentally ship +12% benchmark wins that regress 8% in production. Pre-registration is the discipline that keeps the verdict trustworthy.
+
+Think of it as **an autonomous experiment runner, not an autonomous AI scientist that invents the hypothesis AND grades it**.
 
 ## Why a sprint-and-generalize loop
 
@@ -153,6 +164,9 @@ Running the experimental discipline that AI teams know they should follow but sk
 
 **Why "autonomous experimentation" and not "AI scientist"?**
 Because the skill autonomously runs experiments — it does not autonomously invent hypotheses or brainstorm what to test. The human (or Claude in conversation with the human) supplies the candidate arms; `auto-itera` runs the loop from there to verdict. Calling it an "AI scientist" would oversell what it does and undersell what it does well: turning a vague "should we use X or Y?" question into a defensible verdict in hours.
+
+**Why doesn't auto-itera pick its own metric?**
+By design. A metric the system picks for itself is a metric the system can drift toward — and "the model that scored highest on the metric the model designed" is exactly how teams accidentally ship +12% benchmark wins that regress 8% in production. Pre-registering the metric, threshold, and judge rubric BEFORE any data is sampled is the discipline that keeps the verdict trustworthy. The skill auto-designs the *experimental execution* (sampling, splits, variance trials, slicing, gating); you lock the *evaluation criteria* upfront. Splitting these responsibilities is what separates rigorous evaluation from automated self-confirmation.
 
 **Does this work with non-Claude models?**
 Yes. The skill is model-agnostic — it tells Claude Code what discipline to enforce, but the arms you compare can be any models, any providers, any prompt / retrieval / architecture variants.
