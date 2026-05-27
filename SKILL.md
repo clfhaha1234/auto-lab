@@ -1,13 +1,19 @@
 ---
 name: auto-itera
-description: Use when comparing competing approaches (prompts, architectures, models, algorithms, retrieval strategies) against a baseline using real production data — needs to make a "ship or kill" decision under uncertainty. Runs a disciplined sprint-and-generalize loop with held-out test discipline and first-principles anti-overfitting guards.
+description: Use when the user wants to autonomously search for the best AI/engineering approach across competing candidates (prompts, models, retrieval strategies, architectures, algorithms) — give it a goal + candidate arms + success threshold, it runs the experiment to a defensible ship-or-kill verdict. Autonomously handles sourcing real production data, scoring arms in parallel, diagnosing per-row, sprint-and-generalize iteration, and writing the conclusion doc. Built-in safeguards (held-out test discipline, variance-floor checks, generalization gates) keep the verdict trustworthy.
 ---
 
 # Auto Itera
 
 ## Overview
 
-A disciplined experimental-comparison loop: **Frame → Source → Metric → Run → Diagnose → Conclude**. The pivot is **scientific method applied to engineering decisions**: hypothesis-first, baseline + arms, real production data, held-out test set, sprint-and-generalize refinement (not unbounded iteration, not arbitrary hard caps).
+**Autonomous experimentation engine for AI engineering decisions.** You provide three things — a goal, the candidate approaches, and a success threshold. auto-itera does the rest: sources real production data, scores baseline + arms in parallel, diagnoses per-row, iterates in disciplined sprints, runs the held-out test pass, and writes a one-page conclusion doc with publication-quality charts.
+
+The pivot: **AI engineering decisions move from handcrafted trial-and-error to autonomous scientific search.** Instead of opening a notebook and eyeballing diffs, you delegate the whole experimental loop and get back a verdict you can defend in a code review.
+
+Internally the loop is a six-phase scientific method — **Frame → Source → Metric → Run → Diagnose → Conclude** — with sprint-and-generalize refinement (not unbounded iteration, not arbitrary hard caps). The autonomy lives in phases 1, 3, 4, and 5; phases 0 (Frame) and 2 (Metric pre-registration) are the user-provided inputs that anchor the search.
+
+**Honest expectation boundary**: auto-itera autonomously *runs* the experiment given a goal and candidate arms. It does **not** autonomously brainstorm what to test — you (or the human asking Claude) still write the candidate prompts / pick the candidate models / define the metric. The autonomy is "from candidates to verdict", not "from blank slate to verdict".
 
 ```mermaid
 flowchart LR
@@ -182,7 +188,9 @@ After arms are locked from Phase 4:
 
 **Do not iterate after Phase 5.** If the test result doesn't support shipping, the conclusion is "kill" or "needs more design," not "let me tweak and re-run." Re-running on test = test set is now contaminated for this question.
 
-## First-Principles Anti-Overfitting Guards
+## Safeguards (the 22 guards)
+
+Autonomy without honesty is worse than vibes — at least vibes don't pretend to be science. These safeguards exist so the autonomous loop refuses to lie to you.
 
 **Forbidden moves** — these are how engineers accidentally lie to themselves:
 
@@ -292,6 +300,8 @@ The doc + charts are the experiment's only output: code is throw-away, the concl
 
 ## Discovery Workflow
 
-When user says: "let's experiment with X vs Y", "run a benchmark", "compare these prompts", "should we use Haiku or Sonnet here", "is this design better" — invoke this skill, write Phase 0 frame, then proceed.
+When user says: "let's experiment with X vs Y", "run a benchmark", "compare these prompts", "should we use Haiku or Sonnet here", "is this design better" — invoke this skill, work with the user (or decide from context) what the candidate arms are, write Phase 0 frame collaboratively, then **autonomously run Phases 1–5 to verdict**. Surface the conclusion doc + charts at the end; don't pause for confirmation between phases unless something genuinely ambiguous arises.
 
 When user says: "fix this bug" or "iterate on this prompt" — that's `self-improve` (single-arm iterative debugging), not this. Don't conflate.
+
+**The user's role**: provide goal, candidate arms, success threshold. **The skill's role**: source data, score arms, diagnose, sprint, gate, run the test pass, write the conclusion. If the user hands you only the goal but not the candidate arms, push back ONCE to elicit specific candidates — autonomously brainstorming candidate prompts/models without user buy-in is out of scope (the candidates carry the user's domain knowledge about what's worth comparing).

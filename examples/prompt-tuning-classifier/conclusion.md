@@ -29,7 +29,7 @@ All three arms beat baseline on aggregate by ~8.9pp (std across 3 trials: ~1.4pp
 
 ## Phase 4 — diagnostic
 
-Per-row diff inspection on dev surfaced one signal worth flagging into Phase 0 of any follow-up: `v3`'s amount-direction hint helped Enterprise rows (which carry rich amount context) but appears to **over-correct** SMB rows where the amount column is sparse or zero-filled. The iter-1 hypothesis ("amount hints universally help") was **falsified by iter-3**. Per the 3-iter cap, arms were locked and we proceeded to test.
+Per-row diff inspection on dev surfaced one signal worth flagging into Phase 0 of any follow-up: `v3`'s amount-direction hint helped Enterprise rows (which carry rich amount context) but appears to **over-correct** SMB rows where the amount column is sparse or zero-filled. The iter-1 hypothesis ("amount hints universally help") was **falsified by iter-3**. The sprint completed in 3 iterations; the generalization gate ran (amount-direction hint qualified as a "universal mechanism" rather than a hardcode, so the change stayed in the arm); dev signal saturated at the slice level — arms were locked and we proceeded to test rather than start a second sprint.
 
 ## Phase 5 — verdict (one pass on held-out test set)
 
@@ -66,6 +66,8 @@ Investigate whether amount-direction hints can be made **slice-conditional** (ap
 - [x] Blind judge (arm IDs anonymized per row)
 - [x] Each iter changed ONE thing
 - [x] Iter hypotheses written in advance; iter-3 falsification accepted as a finished iteration
-- [x] 3-iteration cap enforced
-- [x] Verdict locks LATEST hypothesis-driven iter (`prompt-v3` was locked for test even though its dev score wasn't higher than `prompt-v2`'s)
+- [x] Sprint cap (3 iter / sprint) enforced
+- [x] Generalization gate run at sprint end; amount-direction hint classified as universal mechanism (kept), not hardcode (would have been deleted)
+- [x] Single sprint sufficed (dev signal saturated; second sprint would have been metric-chasing)
+- [x] Verdict locks LATEST gate-passed hypothesis-driven iter (`prompt-v3` was locked for test even though its dev score wasn't higher than `prompt-v2`'s)
 - [x] Per-slice scores reported; aggregate winner `v3` overturned by per-slice rule
