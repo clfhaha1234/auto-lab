@@ -305,3 +305,4 @@ When user says: "let's experiment with X vs Y", "run a benchmark", "compare thes
 When user says: "fix this bug" or "iterate on this prompt" — that's `self-improve` (single-arm iterative debugging), not this. Don't conflate.
 
 **The user's role**: provide goal, candidate arms, success threshold. **The skill's role**: source data, score arms, diagnose, sprint, gate, run the test pass, write the conclusion. If the user hands you only the goal but not the candidate arms, push back ONCE to elicit specific candidates — autonomously brainstorming candidate prompts/models without user buy-in is out of scope (the candidates carry the user's domain knowledge about what's worth comparing).
+
