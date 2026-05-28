@@ -1,0 +1,23 @@
+{
+  "name": "auto-itera",
+  "description": "Autonomous experimentation engine for AI engineering decisions. Define a goal + candidates + threshold, get a defensible ship-or-kill verdict in hours — sealed held-out test, pre-registered metric, sprint-and-generalize iteration.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Lifei Chen",
+    "url": "https://github.com/clfhaha1234"
+  },
+  "repository": "https://github.com/clfhaha1234/auto-itera",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "claude-skill",
+    "llm-evaluation",
+    "ab-testing",
+    "prompt-engineering",
+    "ai-agents",
+    "experiment-tracking",
+    "mlops",
+    "llm-ops",
+    "evaluation-framework"
+  ]
+}
