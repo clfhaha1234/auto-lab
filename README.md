@@ -15,17 +15,29 @@
 
 </div>
 
-## From handcrafted trial-and-error to autonomous scientific search
+## What you'd actually paste into Claude
 
-Every team shipping an LLM product has decisions like these on the table:
+`auto-itera` activates the moment a "should we use X or Y?" question lands in your editor. Real prompts that trigger it:
 
-- **Prompt optimization** — does the new system prompt actually beat the current one?
-- **Model selection** — Sonnet, Haiku, or Opus for this hop?
-- **Retrieval strategies** — BM25, dense, or hybrid on real customer queries?
-- **Workflow tuning** — single-call vs two-call orchestration; sync vs queued?
-- **Architecture experiments** — does adding a router LLM help or just add latency?
+- **Prompt optimization** — *"Compare prompt-v1, v2, v3 on this classifier."*
+- **Model selection** — *"Is Haiku 4.5 enough here, or do we need Sonnet?"*
+- **Retrieval strategies** — *"BM25, vector, or hybrid retrieval for this RAG?"*
+- **Workflow tuning** — *"Single-call vs two-call orchestration for the bookkeeping pipeline?"*
+- **Architecture experiments** — *"Does adding a router LLM help, or just add latency?"*
+- **Eval methodology audits** — *"Is our judge-LLM biased? Spot-check 5 rows with a different family."*
 
 Today most teams answer these with vibes, eyeballed diffs, or notebooks they've quietly tuned the system against. `auto-itera` automates the rigorous version of this work: you state the goal, hand over the candidates, and the loop runs to a verdict you can defend in a code review.
+
+## From handcrafted trial-and-error to autonomous scientific search
+
+What separates `auto-itera` from "run an eval and look at numbers":
+
+- It samples real production data instead of synthetic test cases.
+- It seals the held-out test set before any iteration, opens it once, no re-runs.
+- It pre-registers the metric + threshold so the goalpost can't move after seeing scores.
+- It iterates in disciplined sprints with a generalization gate that strips out dev-set memorization.
+- It checks aggregate AND per-slice — an aggregate winner that regresses a major tenant slice is rejected automatically.
+- It writes the conclusion as a one-page doc + three publication-quality charts you can paste into a code review.
 
 ## The loop
 
