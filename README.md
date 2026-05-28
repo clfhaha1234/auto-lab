@@ -157,17 +157,59 @@ Teams **shipping LLM products** who need decisions that survive production:
 
 If you're a solo dev experimenting in a notebook, you can skip this. If you have customers depending on whether your AI decisions are right, you can't.
 
-## Quick Start — your first experiment in 5 minutes
+## Installation
 
-### 1. Install
+Pick the path for your tool:
+
+### Claude Code — plugin marketplace (recommended)
+
+Zero git, zero symlink — Claude Code handles install + updates:
+
+```text
+/plugin marketplace add clfhaha1234/auto-itera
+/plugin install auto-itera@auto-itera
+```
+
+To update later:
+
+```text
+/plugin marketplace update auto-itera
+```
+
+### Claude Code — git clone (no marketplace needed)
 
 ```bash
 git clone https://github.com/clfhaha1234/auto-itera.git ~/.claude/skills/auto-itera
 ```
 
-That's it. `auto-itera` is now a Claude Code skill. No other dependencies until you want to render charts standalone.
+Works without the marketplace mechanism — Claude Code picks up any directory under `~/.claude/skills/` that contains a `SKILL.md`.
 
-### 2. Open Claude Code in any project and paste a real comparison question
+### Cursor
+
+Copy or symlink the skill content into `.cursor/rules/`:
+
+```bash
+git clone https://github.com/clfhaha1234/auto-itera.git ~/auto-itera
+ln -s ~/auto-itera/SKILL.md /path/to/your/project/.cursor/rules/auto-itera.md
+```
+
+### Windsurf
+
+Add `~/auto-itera/SKILL.md` to your Cascade context, or paste the content into a `.windsurfrules` file at the project root.
+
+### GitHub Copilot
+
+Reference the skill content from `.github/copilot-instructions.md` — either inline the full SKILL.md or include it via `@workspace` on relevant files.
+
+### Any other agentic editor
+
+`SKILL.md` is plain markdown — point any agent that can read project rules / system prompts / context files at it.
+
+That's it. No other dependencies until you want to render charts standalone (see [Optional: re-render charts](#optional-re-render-charts-from-a-saved-datajson)).
+
+## Quick Start — your first experiment in 5 minutes
+
+### 1. Paste a real comparison question in Claude Code
 
 The format that triggers the skill cleanly: state the **goal**, spell out the **candidates** (baseline + 1–3 alternatives), and **pre-register the threshold** before any data is sampled.
 
@@ -180,7 +222,7 @@ The format that triggers the skill cleanly: state the **goal**, spell out the **
 >
 > *Ship criterion: ≥+5pp aggregate accuracy AND no per-tenant slice regresses more than -2pp.*
 
-### 3. Watch the autonomous loop run
+### 2. Watch the autonomous loop run
 
 `auto-itera` does the rest:
 
@@ -194,7 +236,7 @@ The format that triggers the skill cleanly: state the **goal**, spell out the **
 
 Wall clock on a 200-row dataset: typically **5–15 minutes**. Most of that is LLM scoring; Claude's thinking is a tiny fraction.
 
-### 4. What you don't need
+### 3. What you don't need
 
 - No API keys to configure (uses whatever Claude Code already has)
 - No separate dashboard / hosted service
